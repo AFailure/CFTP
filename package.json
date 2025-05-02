@@ -1,0 +1,10 @@
+{
+    "name": "network-thing",
+    "version": "1.0.0",
+    "description": "network project for class",
+    "type": "module",
+    "dependencies": {
+        "express": "^5.1.0",
+        "ws": "^8.18.1"
+    }
+}

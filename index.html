@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>test</title>
+    </head>
+    <body>
+        <p>this is working</p>
+        <input type="file" name="input-file"/>
+        <button onclick="upload()">upload</button>
+    </body>
+    <script>
+        const socket = new WebSocket('ws://localhost:8081');
+
+        socket.onopen = function(event) {
+            console.log('websocket connection opened');
+
+            socket.send('test');
+        }
+
+        socket.onmessage = function(data) {
+            console.log('receive: ', data);
+        }
+
+        function upload() {
+            console.log('uploading file')
+        }
+    </script>
+</html>
