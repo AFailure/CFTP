@@ -31,6 +31,9 @@ class Socket {
         ws.on('message', (buf) => this.on_message(buf));
     }
 
+    /*
+        open a channel for recieving file segments
+    */
     open_transfer(buf) {
         const uuid = randomUUID();
 
@@ -40,16 +43,21 @@ class Socket {
         }
 
         const name_size = buf.readUint32LE(1);
-        const expected_size = buf.readUint32LE(6 + name_size); // expected file size in bytes
+        // const expected_size = buf.readUint32LE(6 + name_size); // expected file size in bytes
 
         this.channels[uuid] = {
             name: buf.toString('utf-8', 5, 5 + name_size), // file name
-            expected_size: expected_size,
+            expected_size: 0, // expected_size,
             recieved_bytes: 0,
-            data: Buffer.alloc(expected_size)
+            data: Buffer.alloc(10)
         };
+
+        console.log(this.channels[uuid])
     }
 
+    /*
+        handle receiving a chunk
+    */
     chunk_recieve(buf) {
         const identifier = bytes_to_uuid(buf.slice(1, 17))
         const sequence_number = buf.readUint32LE(17);
@@ -62,12 +70,18 @@ class Socket {
         }
 
         // sanity check
-        if (chunk_size > buf.length - 25) {
+        if (chunk_size != buf.length - 25) {
             
             return; // drop chunk, send back retranmission request
         }
 
+        channel.recieved_bytes += chunk_size;
+
         buf.copy(channel.data, sequence_number, 22, 22 + chunk_size);
+    }
+
+    file_request() {
+
     }
 
     on_error(err) {
@@ -77,7 +91,19 @@ class Socket {
     on_message(buf) {
         const opcode = buf.readUInt8();
 
-        console.log(opcode)
+        console.log(`receive | length ${buf.length}`);
+        console.log(Array.from(buf));
+
+        switch (opcode) {
+            case 1:
+                this.open_transfer(buf);
+                break;
+            case 2:
+                this.chunk_recieve(buf);
+                break;
+            default:
+                console.log('invalid operation code recieved');
+        }
     }
 }
 

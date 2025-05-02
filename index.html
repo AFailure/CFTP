@@ -6,24 +6,138 @@
     </head>
     <body>
         <p>this is working</p>
-        <input type="file" name="input-file"/>
+        <input id="file-input" type="file" name="input-file"/>
         <button onclick="upload()">upload</button>
     </body>
     <script>
-        const socket = new WebSocket('ws://localhost:8081');
+        class Buffer {
+            constructor (size) {
+                this.array_buffer = new ArrayBuffer(size);
+                this.byte_array = new Uint8Array(this.array_buffer);
+            }
 
-        socket.onopen = function(event) {
-            console.log('websocket connection opened');
+            // sanity check inputs
+            write_check(offset, data, size, type) {
+                if (offset + size >= this.array_buffer.length) {
+                    throw new Error('offset exceeds bounds');
+                }
 
-            socket.send('test');
+                if (typeof(data) != type) {
+                    throw new Error('invalid type')
+                }
+            }
+
+            writeUInt8(offset, number) {
+                this.write_check(offset, number, 1, 'number');
+
+                this.byte_array[offset]         = number & 0xFF;
+            }
+
+            writeUInt16LE(offset, number) {
+                this.write_check(offset, number, 2, 'number');
+
+                this.byte_array[offset]         =  number & 0x00FF;
+                this.byte_array[offset + 1]     = (number & 0xFF00) >> 8;
+            }
+            
+            writeUInt16BE(offset, number) {
+                this.write_check(offset, number, 2, 'number');
+
+                this.byte_array[offset]         = (number & 0xFF00) >> 8;
+                this.byte_array[offset + 1]     =  number & 0x00FF;
+            }
+
+            writeUInt32LE(offset, number) {
+                this.write_check(offset, number, 4, 'number');
+
+                this.byte_array[offset]         =  number & 0x000000FF;
+                this.byte_array[offset + 1]     = (number & 0x0000FF00) >> 8;
+                this.byte_array[offset + 2]     = (number & 0x00FF0000) >> 16;
+                this.byte_array[offset + 3]     = (number & 0xFF000000) >> 24;
+            }
+
+            writeUInt32BE(offset, number) {
+                this.write_check(offset, number, 4, 'number');
+
+                this.byte_array[offset]         = (number & 0xFF000000) >> 24;
+                this.byte_array[offset + 1]     = (number & 0x00FF0000) >> 16;
+                this.byte_array[offset + 2]     = (number & 0x0000FF00) >> 8;
+                this.byte_array[offset + 3]     =  number & 0x000000FF;
+            }
+
+            writeUInt64LE(offset, number) {
+                this.write_check(offset, number, 8, 'number');
+
+                this.byte_array[offset]         =  number & 0x00000000000000FF;
+                this.byte_array[offset + 1]     = (number & 0x000000000000FF00) >> 8;
+                this.byte_array[offset + 2]     = (number & 0x0000000000FF0000) >> 16;
+                this.byte_array[offset + 3]     = (number & 0x00000000FF000000) >> 24;
+                this.byte_array[offset + 4]     = (number & 0x000000FF00000000) >> 32;
+                this.byte_array[offset + 5]     = (number & 0x0000FF0000000000) >> 40;
+                this.byte_array[offset + 6]     = (number & 0x00FF000000000000) >> 48;
+                this.byte_array[offset + 7]     = (number & 0xFF00000000000000) >> 56;          
+            }
+            
+            writeUInt64BE(offset, number) {
+                this.write_check(offset, number, 8, 'number');
+
+                this.byte_array[offset]         = (number & 0xFF00000000000000) >> 56;
+                this.byte_array[offset + 1]     = (number & 0x00FF000000000000) >> 48;
+                this.byte_array[offset + 2]     = (number & 0x0000FF0000000000) >> 40;
+                this.byte_array[offset + 3]     = (number & 0x000000FF00000000) >> 32;
+                this.byte_array[offset + 4]     = (number & 0x00000000FF000000) >> 24;
+                this.byte_array[offset + 5]     = (number & 0x0000000000FF0000) >> 16;
+                this.byte_array[offset + 6]     = (number & 0x000000000000FF00) >> 8;
+                this.byte_array[offset + 7]     =  number & 0x00000000000000FF;    
+            }
+
+            writeChar(offset, char) {
+                this.write_check(offset, char, 1, 'string');
+            
+                this.byte_array[offset] = char.charAt(0);
+            }
+
+            writeString(offset, data) {
+                this.write_check(offset, data, data.length, 'string');
+
+                for (let i = 0; i < data.length; i++) {
+                    this.byte_array[offset + i] = data.charCodeAt(i);
+                }
+            }
         }
+        
 
-        socket.onmessage = function(data) {
-            console.log('receive: ', data);
+        function upload_file(file) {
+            const socket = new WebSocket('ws://localhost:8081');
+
+            const file_name = file.name;
+
+            // socket init
+            socket.onopen = function(event) {
+                console.log('websocket connection opened');
+
+                const buffer = new Buffer(5 + file_name.length);
+
+                buffer.writeUInt8(0, 1);
+                buffer.writeUInt32LE(1, file_name.length);
+                buffer.writeString(5, file_name);
+
+                socket.send(buffer.array_buffer);
+            }
         }
 
         function upload() {
-            console.log('uploading file')
+            const file_input = document.getElementById('file-input');
+            const files = file_input.files;
+
+            if (files.length < 1) {
+                return console.log('no files selected');
+            }
+
+            const test_file = files[0];
+
+            upload_file(test_file);
         }
+
     </script>
 </html>
