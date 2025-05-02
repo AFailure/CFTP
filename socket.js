@@ -24,7 +24,7 @@ class Socket {
         this.socket = ws;
         this.client_address = req.socket.remoteAddress;
 
-        this.active_transfers = {};
+        this.channels = {};
 
         // event listeners
         ws.on('error', (err) => this.on_error(err));
@@ -35,14 +35,14 @@ class Socket {
         const uuid = randomUUID();
 
         // collison detect
-        if (this.active_transfers[uuid]) {
+        if (this.channels[uuid]) {
             return this.open_transfer()
         }
 
         const name_size = buf.readUint32LE(1);
         const expected_size = buf.readUint32LE(6 + name_size); // expected file size in bytes
 
-        this.active_transfers[uuid] = {
+        this.channels[uuid] = {
             name: buf.toString('utf-8', 5, 5 + name_size), // file name
             expected_size: expected_size,
             recieved_bytes: 0,
@@ -51,20 +51,23 @@ class Socket {
     }
 
     chunk_recieve(buf) {
-        const id_size = buf.readUint32LE(1);
+        const identifier = bytes_to_uuid(buf.slice(1, 17))
+        const sequence_number = buf.readUint32LE(17);
+        const chunk_size = buf.readUint32LE(21);
 
-        // sanity check, if id_size massively huge drop packet
-        if (id_size > buf.length) {
-            return
+        // check identifier
+        const channel = this.channels[identifier];
+        if (channel == null) {
+            return; // drop chunk due to invalid identifer
         }
 
-        let offset = 5
+        // sanity check
+        if (chunk_size > buf.length - 25) {
+            
+            return; // drop chunk, send back retranmission request
+        }
 
-        const identifier = buf.toString('utf-8', offset, offset += id_size);
-        const sequence_number = buf.readUint32LE(++offset);
-        const chunk_size = buf.readUint32LE(offset += 4);
-
-        
+        buf.copy(channel.data, sequence_number, 22, 22 + chunk_size);
     }
 
     on_error(err) {
