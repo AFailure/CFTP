@@ -381,9 +381,9 @@
 
             setUploadList();
 
-            const test_file = files[0];
-
-            upload_file(test_file, 0);
+            for (let i = 0; i < files.length; i++) {
+                upload_file(files[i], i);
+            }
         }
 
         function format_size(size) {
