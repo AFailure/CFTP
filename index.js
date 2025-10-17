@@ -18,6 +18,10 @@ app.get('/style.css', (req, res) => {
     return res.sendFile(path.join(__dir__, 'style.css'));
 })
 
+app.get('/cftp_client.js', (req, res) => {
+    return res.sendFile(path.join(__dir__, 'cftp_client.js'));
+})
+
 app.listen(port, () => {
     console.log(`server listening on port ${port}`);
 })

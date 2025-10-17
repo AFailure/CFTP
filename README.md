@@ -1,6 +1,6 @@
 # Multi-file Upload
 
-The goal of this project is to create a simple application to upload files to a remote server using a network system that mimics the behavior of the TCP protocol with the use of websockets.
+The goal of this project is to create a simple application to upload files to a remote server using a network system that mimics the behavior of the FTP protocol with the use of websockets.
 
 ## To Run:
 Have node.js installed on your system, (you can find it here, https://nodejs.org/en)
